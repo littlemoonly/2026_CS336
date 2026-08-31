@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/xinyue/Desktop/CS336/assignment1-basics status --short)",
+      "Bash(uv run *)"
+    ]
+  }
+}

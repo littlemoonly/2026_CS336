@@ -1,0 +1,64 @@
+# macOS / editor metadata
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Python bytecode and tool caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Build and packaging output
+build/
+dist/
+*.egg-info/
+*.whl
+*.zip
+
+# Logs and experiment tracking
+*.log
+logs/
+wandb/
+runs/
+outputs/
+
+# Downloaded datasets and generated training artifacts
+data/
+datasets/
+checkpoint/
+checkpoints/
+models/
+artifacts/
+
+# Common large ML/binary artifacts
+*.bin
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.pickle
+*.pkl
+*.npy
+*.npz
+
+# Small model fixtures committed for tests are intentional
+!**/tests/fixtures/**/*.bin
+!**/tests/fixtures/**/*.safetensors
