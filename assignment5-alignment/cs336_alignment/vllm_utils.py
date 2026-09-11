@@ -33,8 +33,10 @@ class VLLMServer:
     gpu: int = 1
     seed: int = 0
     load_format: str = "auto"
+    dtype: str = "float16"
     logging_level: str = "ERROR"
-    gpu_memory_utilization: float = 0.9
+    gpu_memory_utilization: float = 0.6
+    enforce_eager: bool = True
     launch_server: bool = True
     startup_timeout: int = 600
     shutdown_timeout: int = 30
@@ -54,8 +56,10 @@ class VLLMServer:
                 gpu=self.gpu,
                 seed=self.seed,
                 load_format=self.load_format,
+                dtype=self.dtype,
                 logging_level=self.logging_level,
                 gpu_memory_utilization=self.gpu_memory_utilization,
+                enforce_eager=self.enforce_eager,
             )
             atexit.register(self.stop)
         wait_for_server(self.base_url, self.process, self.startup_timeout)
@@ -120,11 +124,20 @@ def start_server(
     gpu: int,
     seed: int,
     load_format: str,
+    dtype: str,
     logging_level: str,
     gpu_memory_utilization: float = 0.9,
+    enforce_eager: bool = True,
 ) -> subprocess.Popen:
     env = os.environ.copy()
-    env["CUDA_VISIBLE_DEVICES"] = str(gpu)
+    visible_devices = env.get("CUDA_VISIBLE_DEVICES")
+    if visible_devices:
+        device_ids = [device.strip() for device in visible_devices.split(",")]
+        if gpu >= len(device_ids):
+            raise ValueError(f"GPU {gpu} is not present in CUDA_VISIBLE_DEVICES={visible_devices}.")
+        env["CUDA_VISIBLE_DEVICES"] = device_ids[gpu]
+    else:
+        env["CUDA_VISIBLE_DEVICES"] = str(gpu)
     env["VLLM_SERVER_DEV_MODE"] = "1"
     env["VLLM_LOGGING_LEVEL"] = logging_level
     command = [
@@ -136,7 +149,7 @@ def start_server(
         "--port",
         str(port),
         "--dtype",
-        "bfloat16",
+        dtype,
         "--enable-prefix-caching",
         "--gpu-memory-utilization",
         str(gpu_memory_utilization),
@@ -149,6 +162,8 @@ def start_server(
         "--load-format",
         load_format,
     ]
+    if enforce_eager:
+        command.append("--enforce-eager")
     logger.info("Starting vLLM server: %s", " ".join(command))
     return subprocess.Popen(command, env=env, start_new_session=True)
 
