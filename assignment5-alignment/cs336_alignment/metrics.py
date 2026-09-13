@@ -3,6 +3,7 @@
 from typing import Any
 import re
 
+
 def parse_mmlu_response(
     mmlu_example: dict[str, Any],
     model_output: str,
@@ -52,3 +53,28 @@ def parse_mmlu_response(
         return matches[0]
 
     return None
+
+
+def parse_gsm8k_response(model_output: str) -> str | None:
+    """从 GSM8K 模型输出中解析最后出现的数值答案。
+
+    Args:
+        model_output: 模型生成的推理过程及最终答案。
+
+    Returns:
+        解析成功时返回数值字符串，输出中没有数值时返回 ``None``。
+    """
+    # 统一换行和连续空白，让后续核心逻辑只处理一种文本形式。
+    output = " ".join(model_output.strip().split())
+    if not output:
+        return None
+
+    # TODO(STUDENT): 找出 output 中最后出现的合法数值，并按要求规范化后返回。
+    # 注意考虑整数、小数、负数以及带千位分隔符的数字；没有匹配时返回 None。
+    pattern = r"-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
+    matches = re.findall(pattern, output)
+
+    if not matches:
+        return None
+    answer = matches[-1]
+    return answer.replace(",", "") # 规范化千位分隔符
