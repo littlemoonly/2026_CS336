@@ -77,7 +77,14 @@ def compute_lm_loss(
     # 2. 前向计算 logits；形状为 (batch_size, seq_length, vocab_size)。
     # 3. 展平前两个维度，用 F.cross_entropy 计算 scalar mean loss。
     # Dataset 已经将 labels 右移过一位，这里不要再次 shift。
-    raise NotImplementedError
+    input_ids = batch["input_ids"].to(device) # [B, T]
+    labels = batch["labels"].to(device)
+    logits = model(input_ids=input_ids).logits # [B, T, V]
+    # 前两维展平
+    labels = labels.reshape(-1)
+    logits = logits.reshape(-1, logits.shape[-1])
+    loss = F.cross_entropy(input=logits, target=labels)
+    return loss
 
 
 def train_one_epoch(
@@ -101,8 +108,43 @@ def train_one_epoch(
     # 5. 最后不足 accumulation steps 的 microbatches 也要完成一次更新；
     # 6. 每 log_every 个 optimizer update，用 wandb_run.log 和 logger.info
     #    记录未缩放的 train/loss、epoch 和 update_step。
-    raise NotImplementedError
+    model.train()
+    optimizer.zero_grad(set_to_none=True)
+    update_step = first_update_step  #??
+    num_microbatches = len(data_loader)
+    window_loss_sum = 0.0
 
+    for microbatch_idx, batch in enumerate(data_loader):
+        window_start = (microbatch_idx // gradient_accumulation_steps) * gradient_accumulation_steps
+        cur_window_size = min(gradient_accumulation_steps, num_microbatches - window_start)
+        raw_loss = compute_lm_loss(model, batch, device)    # 包含 forward
+        scaled_loss = raw_loss / cur_window_size
+        scaled_loss.backward()  # 计算并累加 grad
+        window_loss_sum += raw_loss.detach().item()
+        is_full_window = ((microbatch_idx + 1) % gradient_accumulation_steps == 0)
+        is_end_of_epoch = (microbatch_idx + 1 == num_microbatches)
+
+        if is_full_window or is_end_of_epoch:
+            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+            update_step += 1
+            mean_window_loss = window_loss_sum / cur_window_size
+
+            logger.info(
+                "update_step=%d epoch=%d loss=%.6f",
+                update_step,
+                epoch,
+                mean_window_loss,
+            )
+            wandb_run.log(
+                {
+                    "train/loss": mean_window_loss,
+                    "epoch": epoch,
+                    "update_step": update_step,
+                }
+            )
+            window_loss_sum = 0.0
+    return update_step
 
 def main() -> None:
     args = parse_args()

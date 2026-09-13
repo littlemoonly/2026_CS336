@@ -68,3 +68,11 @@ Dataloader 返回 Iterable
  Dataset Sampler 生成索引顺序 -> 按照 batch_size 将索引分组 -> 调用 dataset[i] 读取每条样本->collate_fn 将多条样本堆叠->返回一个 batch
 ```
 
+#### training script
+
+每次按照当前 accumulation window 的大小对 loss 进行 scale，达到多个microbatch累积，跟一次计算整个batch相同的结果
+
+```
+scaled_loss.backward()  # 计算并累加 grad
+```
+
