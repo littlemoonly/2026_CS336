@@ -42,6 +42,7 @@ outputs/
 
 # Downloaded datasets and generated training artifacts
 data/
+!assignment5-alignment/data/
 datasets/
 checkpoint/
 checkpoints/
